@@ -1,27 +1,141 @@
-{
-  "name": "genlayer-gm",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+"use client";
+
+import { useState } from "react";
+import { ethers } from "ethers";
+
+const CONTRACT_ADDRESS = "0xe5D10BDBFFC1f0E807BD2b9f43cA9f66c0b5a15A";
+
+const ABI = [
+  "function genm() external"
+];
+
+// GenLayer Asimov Testnet
+const GENLAYER_CHAIN = {
+  chainId: "0x107D", // 4221
+  chainName: "GenLayer Asimov Testnet",
+  nativeCurrency: {
+    name: "GEN",
+    symbol: "GEN",
+    decimals: 18,
   },
-  "dependencies": {
-    "next": "16.0.10",
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
-    "ethers": "^6.13.4"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.10",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+  rpcUrls: ["https://genlayer-testnet.rpc.caldera.xyz/http"],
+  blockExplorerUrls: ["https://genlayer-testnet.explorer.caldera.xyz"],
+};
+
+export default function Home() {
+  const [wallet, setWallet] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function connectWallet() {
+    if (!(window as any).ethereum) {
+      alert("MetaMask belum terpasang");
+      return;
+    }
+
+    const ethereum = (window as any).ethereum;
+
+    try {
+      // switch / add network
+      await ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [GENLAYER_CHAIN],
+      });
+
+      const accounts = await ethereum.request({
+        method: "eth_requestAccounts",
+      });
+
+      setWallet(accounts[0]);
+    } catch (err: any) {
+      alert(err.message || "Gagal connect wallet");
+    }
   }
+
+  async function disconnectWallet() {
+    setWallet(null);
+  }
+
+  async function handleGENM() {
+    if (!wallet) {
+      alert("Connect wallet dulu");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const provider = new ethers.BrowserProvider(
+        (window as any).ethereum
+      );
+      const signer = await provider.getSigner();
+
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESS,
+        ABI,
+        signer
+      );
+
+      const tx = await contract.genm();
+      await tx.wait();
+
+      alert("GENM sukses! Onchain ✅");
+    } catch (err: any) {
+      alert(err.reason || err.message || "GENM gagal");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white gap-6">
+      
+      {/* Header */}
+      <div className="absolute top-6 left-6 text-xl font-bold">
+        GenLayer
+        <div className="text-sm text-white/60">
+          Trust Infrastructure for the AI Age
+        </div>
+      </div>
+
+      {/* Wallet */}
+      <div className="absolute top-6 right-6">
+        {!wallet ? (
+          <button
+            onClick={connectWallet}
+            className="px-4 py-2 rounded-lg bg-white text-black"
+          >
+            Connect Wallet
+          </button>
+        ) : (
+          <button
+            onClick={disconnectWallet}
+            className="px-4 py-2 rounded-lg border"
+          >
+            Disconnect
+          </button>
+        )}
+      </div>
+
+      {/* Main */}
+      <h1 className="text-5xl font-extrabold animate-pulse text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-blue-500 to-red-500">
+        Welcome Gen Onchain
+      </h1>
+
+      <p className="text-white/50">
+        Leaderboard: Not Available
+      </p>
+
+      <button
+        onClick={handleGENM}
+        disabled={loading}
+        className="px-10 py-4 rounded-2xl bg-gradient-to-r from-pink-600 to-blue-600 text-lg disabled:opacity-50"
+      >
+        {loading ? "Processing..." : "GENM"}
+      </button>
+
+      <p className="text-xs text-white/40">
+        1x per wallet per day · Onchain
+      </p>
+    </main>
+  );
 }
