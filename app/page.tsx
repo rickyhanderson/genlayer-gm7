@@ -53,7 +53,7 @@ export default function Home() {
       </button>
 
       <p className="mt-4 text-sm text-white/40">
-        1x wallet per day · Onchain
+        1x wallet 
       </p>
     </main>
   );
